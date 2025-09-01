@@ -36,7 +36,7 @@ long long getUnixTimeMs() {
 }
 
 int main(int argc, char *argv[]) {
-    InitWindow(800, 450, "Window");
+    InitWindow(800, 450, "Nameless game...");
     Vector2 rectangle[2] = {{0.00f, (float)GetScreenHeight() - 150}, {(float)GetScreenWidth(), 10}};
     Vector2 cube = {(float)GetScreenWidth() / 2, (float)GetScreenHeight() / 2};
 
