@@ -23,10 +23,7 @@ typedef struct Enemy {
 } Enemy;
 
 int random(int min, int max) {
-    static std::random_device rd;
-    static std::mt19937 gen(rd());
-    std::uniform_int_distribution<> dist(min, max);
-    return dist(gen);
+    return GetRandomValue(min, max);
 }
 
 long long getUnixTimeMs() {
@@ -53,6 +50,7 @@ int main(int argc, char *argv[]) {
     Sound opsound = LoadSound("./resources/op.mp3");
     Sound shotsound = LoadSound("./resources/shot.mp3");
     Sound emptySound = LoadSound("./resources/empty.mp3");
+    Sound lose = LoadSound("./resources/lose.mp3");
 
     char lastkey = 'D';
     float velocity = 0;
@@ -62,6 +60,7 @@ int main(int argc, char *argv[]) {
     bool shot = false;
     long long lastUse = 0;
     long long lastOpUse = 0;
+    long long playedLoseSound = 0;
     Color colors[] = {YELLOW, GREEN, BLUE, PURPLE, DARKBLUE, DARKBROWN, DARKGREEN, PINK, BEIGE};
     while (!WindowShouldClose()) {
         if (shot) std::this_thread::sleep_for(std::chrono::milliseconds(300));
@@ -101,7 +100,7 @@ int main(int argc, char *argv[]) {
                 enemies.push_back(enemy);
             }
         }
-        if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT)) {
+        if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT) && !died) {
             if (getUnixTimeMs() - lastUse > 500) {
                 Bullet bullet;
                 bullet.position = {cube.x + 15, cube.y + 15};
@@ -114,7 +113,7 @@ int main(int argc, char *argv[]) {
                 lastUse = getUnixTimeMs();
             }
         }
-        if (IsMouseButtonPressed(MOUSE_BUTTON_RIGHT)) {
+        if (IsMouseButtonPressed(MOUSE_BUTTON_RIGHT) && !died) {
             if (getUnixTimeMs() - lastOpUse > 5000) {
                 Bullet bullet;
                 bullet.position = {cube.x + 15, cube.y + 15};
@@ -134,7 +133,7 @@ int main(int argc, char *argv[]) {
             if (bullet.direction == 'D') bullet.position.x += 0.75;
             if (bullet.direction == 'A') bullet.position.x -= 0.75;
             if (bullet.op) bullet.position.y -= 0.001;
-            int timeToCheck = bullet.op ? 100000000000000 : 500;
+            int timeToCheck = bullet.op ? 5000 : 500;
             if (getUnixTimeMs() - bullet.time > timeToCheck) {
                 bullets.erase(bullets.begin() + j);
             }
@@ -146,8 +145,8 @@ int main(int argc, char *argv[]) {
                 Enemy enemy = enemies[i];
                 if (fabs(bullet.position.x - enemy.position.x) < 15 && fabs(bullet.position.y - (enemy.position.y + 15)) < 15) {
                     enemies.erase(enemies.begin() + i);
-                    enemyCount++;
-                    bullets.erase(bullets.begin() + j);
+                    enemyCount = random(1, 5);
+                    if (!bullet.op) bullets.erase(bullets.begin() + j);
                 }
             }
         }
@@ -159,8 +158,8 @@ int main(int argc, char *argv[]) {
             }
             if (rectangle[0].y - 30 <= enemy.position.y) {
                 enemy.velocity = 0;
-                if (random(0, 500) == 1) {
-                    enemy.velocity = 0.4;
+                if (random(0, 1000) == 1) {
+                    enemy.velocity = 0.3;
                 }
             } else {
                 enemy.velocity -= 0.001;
@@ -187,7 +186,7 @@ int main(int argc, char *argv[]) {
                 DrawRectangleV({cube.x + direction + (float)random(-1, enemyCount / 1.5), cube.y + 13 + (float)random(0, 1)}, {15, 10}, gunColor);
             } else {
                 for (int i = 0; i < 10; i++) {
-                    DrawRectangleV({cube.x + (float)random(-10, 10), cube.y + 15}, {30, 15}, GRAY);
+                    DrawRectangleV({cube.x + (float)random(-400, 400), cube.y + (float)random(-400, 15)}, {30, 15}, colors[random(0, 8)]);
                 }
             }
             for (Bullet bullet : bullets) {
@@ -198,6 +197,10 @@ int main(int argc, char *argv[]) {
             }
             if (died) {
                 DrawText("You died (close the app and reopen to restart)", 100, 100, 20, BLACK);
+                if (getUnixTimeMs() - playedLoseSound > 8000) {
+                    PlaySound(lose);
+                    playedLoseSound = getUnixTimeMs();
+                }
             }
         }
         EndDrawing();
@@ -205,6 +208,7 @@ int main(int argc, char *argv[]) {
     UnloadSound(opsound);
     UnloadSound(shotsound);
     UnloadSound(emptySound);
+    UnloadSound(lose);
     CloseAudioDevice();
     CloseWindow();
     return 0;
