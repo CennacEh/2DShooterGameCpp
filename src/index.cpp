@@ -16,6 +16,7 @@ int main(int argc, char* argv[]) {
 
     float velocity = 0;
     while (!WindowShouldClose()) {
+        
         ClearBackground(RAYWHITE);
         cam.offset = (Vector2){ cube.x, cube.y };
         rectangle[0] = { 0.00f, (float)GetScreenHeight() - 150 };
