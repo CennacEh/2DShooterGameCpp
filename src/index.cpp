@@ -172,7 +172,7 @@ int main(int argc, char *argv[]) {
             }
         }
         cube.y -= velocity;
-        BeginDrawing();
+        BeginDrawing(); 
         {
             if (shot)
                 DrawRectangleV({0, 0}, {1000, 1000}, RED);
