@@ -1,2 +1,2 @@
-# Raylib platformer
-A quick square and rectangle game
+# 2D Shooter Game made using Raylib C++
+my first game?
