@@ -24,6 +24,12 @@ typedef struct Enemy {
     float velocity;
 } Enemy;
 
+typedef struct Boss {
+    Vector2 position;
+    Color color;
+    int health;
+} Boss;
+
 typedef struct Option {
     Rectangle def;
     Rectangle rect;
@@ -37,6 +43,7 @@ typedef struct Ability {
     std::string description;
     std::function<void()> whatItDoes;
 } Ability;
+
 int random(int min, int max) {
     return GetRandomValue(min, max);
 }
@@ -68,6 +75,7 @@ int main() {
 
     std::vector<Bullet> bullets;
     std::vector<Enemy> enemies;
+    std::vector<Boss> bosses;
 
     Vector2 coin = { 900, 900 };
 
@@ -98,12 +106,14 @@ int main() {
     int shotsShot = 0;
     bool hasTriple = false;
     int chances = 0;
+    bool automatic = false;
 
     std::vector<Ability> abilities = {
         {"Faster Cannon", "Reload your Cannon faster by 1sec\nRarity: Common", [&opCooldown]() { opCooldown -= 1000; }},
         {"Higher Jump", "Jump Higher\nOnly 28374km left until touching \nthe sky\nRarity: Common", [&jump]() { jump += 0.005; }},
         {"Tenth Shot", "Every tenth shot is a cannon\nRarity: RARE", [&hasTriple, &abilities]() { hasTriple = true; abilities.erase(abilities.begin() + 2); }},
         {"Extra chance", "Gain an extra life coin\nRarity: Uncommon", [&chances]() { chances++; }},
+        {"Automatic Gun", "Shoots bullets faster\nRarity: RARE", [&automatic, &abilities]() { automatic = true; abilities.erase(abilities.begin() + 4);}},
     };
 
     Color colors[] = {YELLOW, GREEN, BLUE, PURPLE, DARKBLUE, DARKBROWN, DARKGREEN, PINK, BEIGE};
@@ -145,9 +155,9 @@ int main() {
                     if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT)) {
                         abilities[randomValue1].whatItDoes();
                         giveOptions = false;
-                        isPaused = false;
                         kills++;
                         randomValue1 = random(0, abilities.size() - 1);
+                        isPaused = false;
                         do {
                             randomValue2 = random(0, abilities.size() - 1);
                         } while (randomValue2 == randomValue1 && abilities.size() > 1);
@@ -167,8 +177,8 @@ int main() {
                     if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT)) {
                         abilities[randomValue2].whatItDoes();
                         giveOptions = false;
-                        isPaused = false;
                         kills++;
+                        isPaused = false;
                         randomValue1 = random(0, abilities.size() - 1);
                         do {
                             randomValue2 = random(0, abilities.size() - 1);
@@ -198,7 +208,7 @@ int main() {
         } else if (cube.x >= GetScreenWidth() + 30) {
             cube.x = -30;
         }
-        if (enemies.size() < enemyCount && !isPaused) {
+        if (enemies.size() + (bosses.size() * 2) < enemyCount && !isPaused) {
             if (random(0, 1000) == 0) {
                 Enemy enemy;
                 float side = random(0, 1) % 2 == 0 ? -30 : (float)GetScreenWidth() + 30;
@@ -208,8 +218,32 @@ int main() {
                 enemies.push_back(enemy);
             }
         }
-        if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT) && !died && !isPaused) {
+        if (kills > 100 && !isPaused) {
+            if (random(0, 1000) == 3) {
+                Boss boss;
+                float side = random(0, 1) % 2 == 0 ? -30 : (float)GetScreenWidth() + 30;
+                boss.position = {side, (float)GetScreenHeight() - 230};
+                boss.color = colors[random(0, 5)];
+                boss.health = 30;
+                bosses.push_back(boss);
+            }
+        }
+        if (!automatic && IsMouseButtonPressed(MOUSE_BUTTON_LEFT) && !died && !isPaused) {
             if (getUnixTimeMs() - lastUse > 500) {
+                Bullet bullet;
+                bullet.position = {cube.x + 15, cube.y + 15};
+                bullet.direction = lastkey;
+                bullet.time = getUnixTimeMs();
+                bullet.op = hasTriple && shotsShot % 10 == 0 ? true : false;
+                shot = hasTriple && shotsShot % 10 == 0 ? true : false;
+                bullets.push_back(bullet);
+                if (hasTriple && shotsShot % 10 == 0) PlaySound(opsound); else PlaySound(shotsound);
+                lastUse = getUnixTimeMs();
+                shotsShot++;
+            }
+        }
+        if (automatic && IsMouseButtonDown(MOUSE_BUTTON_LEFT) && !died && !isPaused) {
+            if (getUnixTimeMs() - lastUse > 100) {
                 Bullet bullet;
                 bullet.position = {cube.x + 15, cube.y + 15};
                 bullet.direction = lastkey;
@@ -247,17 +281,49 @@ int main() {
             if (getUnixTimeMs() - bullet.time > timeToCheck) {
                 bullets.erase(bullets.begin() + j);
             }
-            if (bullet.position.x <= -10)
+            if (bullet.position.x <= -10 && !automatic)
                 bullet.position.x = GetScreenWidth() + 10;
-            else if (bullet.position.x >= GetScreenWidth() + 10)
+            else if (bullet.position.x >= GetScreenWidth() + 10 && !automatic)
                 bullet.position.x = -10;
             for (int i = 0; i < enemies.size(); i++) {
                 Enemy enemy = enemies[i];
                 if (fabs(bullet.position.x - enemy.position.x) < 15 && fabs(bullet.position.y - (enemy.position.y + 15)) < 15) {
                     enemies.erase(enemies.begin() + i);
                     kills++;
-                    enemyCount = random(1, 20);
+                    enemyCount = automatic ? random(1, 100) : random(1, 30);
                     if (!bullet.op) bullets.erase(bullets.begin() + j);
+                }
+            }
+            for (int i = 0; i < bosses.size(); i++) {
+                Boss &enemy = bosses[i];
+                if (fabs(bullet.position.x - enemy.position.x) < 70 && fabs(bullet.position.y - (enemy.position.y + 40)) < 70) {
+                    if (enemy.health <= 0) {
+                        bosses.erase(bosses.begin() + i);
+                        kills++;
+                    } else {
+                        enemy.health--;
+                    }
+                    enemyCount = automatic ? random(1, 100) : random(1, 30);
+                    bullets.erase(bullets.begin() + j);
+                }
+            }
+        }
+        for (Boss &enemy : bosses) {
+            if (isPaused) continue;
+            if (cube.x <= enemy.position.x) {
+                enemy.position.x -= 0.05;
+            } else {
+                enemy.position.x += 0.05;
+            }
+            if (fabs(enemy.position.x - cube.x) < 15 && fabs(enemy.position.y - cube.y) < 15) {
+                if (chances <= 0) {
+                    died = true;
+                } else {
+                    chances--;
+                    cube.x = GetScreenWidth()/2;
+                    cube.y = -30;
+                    coin = cube;
+                    PlaySound(coinsound);
                 }
             }
         }
@@ -282,8 +348,8 @@ int main() {
                     died = true;
                 } else {
                     chances--;
-                    cube.x = -30;
-                    cube.y = 100;
+                    cube.x = GetScreenWidth()/2;
+                    cube.y = -30;
                     coin = cube;
                     PlaySound(coinsound);
                 }
@@ -297,6 +363,11 @@ int main() {
             else DrawRectangleV(rectangle[0], rectangle[1], RED);
             for (Enemy enemy : enemies) {
                 DrawRectangleV(enemy.position, {30, 30}, enemy.color);
+            }
+            for (Boss enemy : bosses) {
+                DrawRectangleV(enemy.position, {80, 80}, enemy.color);
+                std::string health = "Health: " + std::to_string(enemy.health) + "/30";
+                DrawText(health.c_str(), enemy.position.x, enemy.position.y - 40, 10, GRAY);
             }
             if (!died) {
                 DrawRectangleV({cube.x + (float)random(-1, enemyCount / 2), cube.y + (float)random(0, 1)}, {30, 30}, GRAY);
@@ -337,7 +408,7 @@ int main() {
                     DrawRectangle(choice.rect.x, choice.rect.y, choice.rect.width, choice.rect.height, choice.color);
                     if (choice.name) {
                         DrawText(choice.name.value(), choice.rect.x + 15, choice.rect.y + 10, 20, BLACK);
-                        DrawText(choice.description.value(), choice.rect.x + 15, choice.rect.y + 30, 10, BLACK);
+                        DrawText(choice.description.value(), choice.rect.x + 15, choice.rect.y + 30, 10, GRAY);
                     }
                 }
             }
@@ -346,7 +417,7 @@ int main() {
                     DrawRectangle(choice.rect.x, choice.rect.y, choice.rect.width, choice.rect.height, choice.color);
                     if (choice.name) {
                         DrawText(choice.name.value(), choice.rect.x + 15, choice.rect.y + 10, 20, BLACK);
-                        DrawText(choice.description.value(), choice.rect.x + 15, choice.rect.y + 30, 10, BLACK);
+                        DrawText(choice.description.value(), choice.rect.x + 15, choice.rect.y + 30, 10, GRAY);
                     }
                 }
             }
