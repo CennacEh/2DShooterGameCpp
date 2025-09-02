@@ -8,6 +8,7 @@
 #include <string>
 #include <thread>
 #include <vector>
+#include <algorithm>
 
 #include "raylib.h"
 
@@ -55,6 +56,8 @@ long long getUnixTimeMs() {
 bool ColorsEqual(Color c1, Color c2) {
     return c1.r == c2.r && c1.g == c2.g && c1.b == c2.b && c1.a == c2.a;
 }
+
+
 
 int main() {
     InitWindow(800, 450, "Nameless game...");
@@ -111,9 +114,19 @@ int main() {
     std::vector<Ability> abilities = {
         {"Faster Cannon", "Reload your Cannon faster by 1sec\nRarity: Common", [&opCooldown]() { opCooldown -= 1000; }},
         {"Higher Jump", "Jump Higher\nOnly 28374km left until touching \nthe sky\nRarity: Common", [&jump]() { jump += 0.005; }},
-        {"Tenth Shot", "Every tenth shot is a cannon\nRarity: RARE", [&hasTriple, &abilities]() { hasTriple = true; abilities.erase(abilities.begin() + 2); }},
+        {"Tenth Shot", "Every tenth shot is a cannon\nRarity: RARE", [&hasTriple, &abilities]() { hasTriple = true; abilities.erase(
+        std::remove_if(abilities.begin(), abilities.end(),
+            [&](const Ability& a){ return a.name == "Tenth Shot"; }),
+        abilities.end()
+    );
+ }},
         {"Extra chance", "Gain an extra life coin\nRarity: Uncommon", [&chances]() { chances++; }},
-        {"Automatic Gun", "Shoots bullets faster\nRarity: RARE", [&automatic, &abilities]() { automatic = true; abilities.erase(abilities.begin() + 4);}},
+        {"Automatic Gun", "Shoots bullets faster\nRarity: RARE", [&automatic, &abilities]() { automatic = true; abilities.erase(
+        std::remove_if(abilities.begin(), abilities.end(),
+            [&](const Ability& a){ return a.name == "Automatic Gun"; }),
+        abilities.end()
+    );
+}},
     };
 
     Color colors[] = {YELLOW, GREEN, BLUE, PURPLE, DARKBLUE, DARKBROWN, DARKGREEN, PINK, BEIGE};
