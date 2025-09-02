@@ -61,6 +61,7 @@ int main(int argc, char *argv[]) {
     long long lastUse = 0;
     long long lastOpUse = 0;
     long long playedLoseSound = 0;
+    int kills = 0;
     Color colors[] = {YELLOW, GREEN, BLUE, PURPLE, DARKBLUE, DARKBROWN, DARKGREEN, PINK, BEIGE};
     while (!WindowShouldClose()) {
         if (shot) std::this_thread::sleep_for(std::chrono::milliseconds(300));
@@ -133,7 +134,7 @@ int main(int argc, char *argv[]) {
             if (bullet.direction == 'D') bullet.position.x += 0.75;
             if (bullet.direction == 'A') bullet.position.x -= 0.75;
             if (bullet.op) bullet.position.y -= 0.001;
-            int timeToCheck = bullet.op ? 5000 : 500;
+            int timeToCheck = bullet.op ? 2000 : 500;
             if (getUnixTimeMs() - bullet.time > timeToCheck) {
                 bullets.erase(bullets.begin() + j);
             }
@@ -145,7 +146,8 @@ int main(int argc, char *argv[]) {
                 Enemy enemy = enemies[i];
                 if (fabs(bullet.position.x - enemy.position.x) < 15 && fabs(bullet.position.y - (enemy.position.y + 15)) < 15) {
                     enemies.erase(enemies.begin() + i);
-                    enemyCount = random(1, 5);
+                    kills++;
+                    enemyCount = random(1, 20);
                     if (!bullet.op) bullets.erase(bullets.begin() + j);
                 }
             }
@@ -202,6 +204,8 @@ int main(int argc, char *argv[]) {
                     playedLoseSound = getUnixTimeMs();
                 }
             }
+            std::string text = "Kills: " + std::to_string(kills);
+            DrawText(text.c_str(), 0, 0, 20, BLACK);
         }
         EndDrawing();
     }
